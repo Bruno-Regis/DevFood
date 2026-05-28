@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/api/">
+    <Project Path="api/DevFood.Api/DevFood.Api.csproj" />
+  </Folder>
+  <Folder Name="/app/">
+    <Project Path="app/DevFood.Web/DevFood.Web.csproj" />
+  </Folder>
+</Solution>
