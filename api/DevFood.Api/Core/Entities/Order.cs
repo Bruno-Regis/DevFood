@@ -4,20 +4,19 @@ namespace DevFood.Api.Core.Entities
 {
     public class Order : BaseEntity
     {
-        public Order(decimal totalPrice, List<OrderItem> items, Guid restaurantId)
+        public Order(decimal deliveryFee, List<OrderItem> items, Guid restaurantId, Guid customerId)
         {
-            TotalPrice = totalPrice;
+            DeliveryFee = deliveryFee;
             Items = items;
             RestaurantId = restaurantId;
-
-            TotalPrice = items.Sum(i => i.TotalItemPrice);
+            CustomerId = customerId;
+            TotalItemsPrice = deliveryFee + items.Sum(i => i.TotalItemPrice);
             Status = OrderStatusEnum.Requested;
             Messages = [];
             History = [];
-
         }
-
-        public decimal TotalPrice { get; set; }
+        public decimal DeliveryFee { get; set; }
+        public decimal TotalItemsPrice { get; set; }
         public List<OrderItem> Items { get; set; }
         public List<OrderHistory> History { get; set; }
         public List<OrderMessage> Messages { get; set; }
@@ -25,6 +24,7 @@ namespace DevFood.Api.Core.Entities
         public OrderStatusEnum Status { get; set; }
         public Guid RestaurantId { get; set; }
         public Guid? DeliveryPersonId { get; set; }
+        public Guid CustomerId { get; set; }
 
         public void SetDeliveryPerson(Guid deliveryPersonId)
         {

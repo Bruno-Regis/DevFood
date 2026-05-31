@@ -20,7 +20,5 @@ namespace DevFood.Api.Core.Entities
         public ProductTypeEnum ProductType { get; set; }
         public decimal Price { get; set; }
         public Guid RestaurantId { get; set; }
-
-
     }
 }

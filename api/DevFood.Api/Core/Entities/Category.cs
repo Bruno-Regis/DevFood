@@ -1,6 +1,6 @@
 ﻿namespace DevFood.Api.Core.Entities
 {
-    public class Category
+    public class Category : BaseEntity
     {
         public Category(string title, string description)
         {

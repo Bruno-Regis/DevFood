@@ -1,0 +1,31 @@
+﻿using DevFood.Api.Core.Entities;
+using DevFood.Api.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Mvc;
+
+namespace DevFood.Api.Controllers
+{
+    [ApiController]
+    [Route("api/categories")]
+    public class CategoriesController : ControllerBase
+    {
+        private readonly DeliveryDbContext _dbContext;
+        public CategoriesController(DeliveryDbContext dbContext)
+        {
+            _dbContext = dbContext;
+        }
+
+        [HttpPost]
+        public IActionResult CreateCategory(CreateCategoryCommand command)
+        {
+            var category = new Category(command.Title, command.Description);
+            _dbContext.Categories.Add(category);
+            return Ok(category.Id);
+        }
+    }
+
+    public class CreateCategoryCommand
+    {
+        public string Title { get; set; } = string.Empty;
+        public string Description { get; set; }
+    }
+}

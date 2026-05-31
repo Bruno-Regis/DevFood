@@ -2,15 +2,14 @@
 {
     public class Restaurant : BaseEntity
     {
-        public Restaurant(string title, string description, string address, Guid categoryId, int myProperty, decimal? minimumOrderAmount)
+        public Restaurant(string title, string description, string address, List<Guid> categories, decimal? minimumOrderAmount)
         {
             Title = title;
             Description = description;
             Address = address;
-            CategoryId = categoryId;
             Categories = [];
             DiscountCodes = [];
-            MyProperty = myProperty;
+            Categories = categories.Select(c => new RestaurantCategory(Id, c)).ToList();
             MinimumOrderAmount = minimumOrderAmount;
         }
 
