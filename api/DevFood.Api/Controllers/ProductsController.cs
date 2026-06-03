@@ -24,6 +24,17 @@ namespace DevFood.Api.Controllers
             _dbContext.Products.Add(product);
             return Ok(product.Id);
         }
+
+        // api/products?restaurantId=123
+        [HttpGet]
+        public IActionResult GetAll(Guid restaunrantId)
+        {
+            var products = _dbContext.Products
+                .Where(p => p.RestaurantId == restaunrantId)
+                .Select(p => ProductModel.FromEntity(p))
+                .ToList();
+            return Ok(products);
+        }
     }
 
     public class CreateProductCommand
@@ -34,5 +45,29 @@ namespace DevFood.Api.Controllers
         public int ProductType { get; set; }
         public decimal Price { get; set; }
         public Guid RestaurantId { get; set; }
+    }
+
+    public class ProductModel
+    {
+        public ProductModel(string title, string description, string? photoUrl, string productType, decimal price, Guid restaurantId)
+        {
+            Title = title;
+            Description = description;
+            PhotoUrl = photoUrl;
+            ProductType = productType;
+            Price = price;
+            RestaurantId = restaurantId;
+        }
+
+        public string Title { get; set; }
+        public string Description { get; set; }
+        public string? PhotoUrl { get; set; }
+        public string ProductType { get; set; }
+        public decimal Price { get; set; }
+        public Guid RestaurantId { get; set; }
+
+        public static ProductModel FromEntity(Product product)
+            => new ProductModel(product.Title, product.Description, product.PhotoUrl, product.ProductType.ToString(), product.Price, product.RestaurantId
+            );
     }
 }

@@ -21,11 +21,43 @@ namespace DevFood.Api.Controllers
             _dbContext.Categories.Add(category);
             return Ok(category.Id);
         }
-    }
+
+        [HttpGet]
+        public IActionResult GetAll()
+        {
+            var categories = _dbContext
+                .Categories
+                .Select(c => CategoryModel.FromEntity(c))
+                .ToList();
+
+            return Ok(categories);
+        }
+
 
     public class CreateCategoryCommand
     {
         public string Title { get; set; } = string.Empty;
         public string Description { get; set; }
     }
+
+    public class CategoryModel
+    {
+        public CategoryModel(Guid id, string title, string description)
+        {
+            Id = id;
+            Title = title;
+            Description = description;
+        }
+
+        public Guid Id { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+
+        public static CategoryModel FromEntity(Category category)
+            => new CategoryModel(category.Id, category.Title, category.Description);
+
+    }
+    }
+
+
 }

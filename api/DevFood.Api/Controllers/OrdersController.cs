@@ -31,6 +31,17 @@ namespace DevFood.Api.Controllers
             _dbContext.Orders.Add(order);
             return Ok(order.Id);
         }
+
+        [HttpGet]
+        public IActionResult GetAll()
+        {
+            var orders = _dbContext
+                .Orders
+                .Select(o => OrderModel.FromEntity(o))
+                .ToList();
+
+            return Ok(orders);
+        }
     }
 
     public class CreateOrderCommand
@@ -46,5 +57,33 @@ namespace DevFood.Api.Controllers
         public Guid ProductId { get; set; }
         public int Quantity { get; set; }
         public string Observation { get; set; } = string.Empty;
+    }
+
+    public class OrderModel
+    {
+        public OrderModel(Guid id, DateTime createdAt, string status, decimal deliveryFee, decimal totalItemsPrice, Guid restaurantId, Guid customerId, int itemsCount)
+        {
+            Id = id;
+            CreatedAt = createdAt;
+            Status = status;
+            DeliveryFee = deliveryFee;
+            TotalItemsPrice = totalItemsPrice;
+            RestaurantId = restaurantId;
+            CustomerId = customerId;
+            ItemsCount = itemsCount;
+        }
+
+        public Guid Id { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public string Status { get; set; }
+        public decimal DeliveryFee { get; set; }
+        public decimal TotalItemsPrice { get; set; }
+        public Guid RestaurantId { get; set; }
+        public Guid CustomerId { get; set; }
+        public int ItemsCount { get; set; }
+
+
+        public static OrderModel FromEntity(Order order)
+            => new OrderModel(order.Id, order.CreatedAt, order.Status.ToString(), order.DeliveryFee, order.TotalItemsPrice, order.RestaurantId, order.CustomerId, order.Items.Count);
     }
 }

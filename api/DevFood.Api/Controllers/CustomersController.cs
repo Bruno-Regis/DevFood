@@ -22,6 +22,17 @@ namespace DevFood.Api.Controllers
             return Ok(customer.Id);
         }
 
+        [HttpGet]
+        public IActionResult GetAll()
+        {
+            var customers = _dbContext
+                .Customers
+                .Select(c => CustomerModel.FromEntity(c))
+                .ToList();
+
+            return Ok(customers);
+        }
+
         // api/customers/12331-23abas-123as/addresses
         [HttpPost("{id}/addresses")]
         public IActionResult CreateAddress(Guid id, CreateCustomerAddressCommand command)
@@ -58,5 +69,27 @@ namespace DevFood.Api.Controllers
         public string City { get; set; } = string.Empty;
         public string State { get; set; } = string.Empty;
         public string Country { get; set; } = string.Empty;
+    }
+
+    public class CustomerModel
+    {
+        public CustomerModel(Guid Id, string fullName, string email, DateTime birthDate, string document, string phoneNumber)
+        {
+            FullName = fullName;
+            Email = email;
+            BirthDate = birthDate;
+            Document = document;
+            PhoneNumber = phoneNumber;
+        }
+
+        public Guid Id { get; set; }
+        public string FullName { get; set; }
+        public string Email { get; set; } 
+        public DateTime BirthDate { get; set; }
+        public string Document { get; set; }
+        public string PhoneNumber { get; set; }
+
+        public static CustomerModel FromEntity(Customer customer)
+            => new CustomerModel(customer.Id, customer.FullName, customer.Email, customer.BirthDate, customer.Document, customer.PhoneNumber);
     }
 }
