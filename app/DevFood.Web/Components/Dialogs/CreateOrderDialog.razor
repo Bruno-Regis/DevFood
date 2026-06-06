@@ -1,0 +1,153 @@
+﻿@inject DevFoodApiClient Api
+@inject ISnackbar Snackbar
+@inject RestaurantContext RestaurantContext
+
+<MudDialog>
+    <TitleContent>New Order</TitleContent>
+    <DialogContent>
+        <MudText Typo="Typo.subtitle2" Class="mb-3">
+            Restaurant: <strong>@(RestaurantContext.SelectedRestaurant?.Title ?? "(none)")</strong>
+        </MudText>
+
+        <MudForm @ref="_form">
+            <MudSelect T="Guid" @bind-Value="_command.CustomerId" Label="Customer" Required="true"
+                       Validation="@(new Func<Guid, string?>(v => v == Guid.Empty ? "Customer is required" : null))">
+                @foreach (var c in Customers)
+                {
+                    <MudSelectItem T="Guid" Value="c.Id">@c.FullName</MudSelectItem>
+                }
+            </MudSelect>
+
+            <MudNumericField T="decimal" @bind-Value="_command.DeliveryFee"
+                             Label="Delivery fee" Min="0" Format="N2"
+                             Validation="@(new Func<decimal, string?>(v => Validators.NonNegativeDecimal(v, "Delivery fee")))" />
+
+            <MudText Typo="Typo.subtitle1" Class="mt-4">Items</MudText>
+
+            @if (_command.Items.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info" Class="mt-2">Add at least one item.</MudAlert>
+            }
+            else
+            {
+                <MudTable Items="_command.Items" Dense="true" Hover="false">
+                    <HeaderContent>
+                        <MudTh>Product</MudTh>
+                        <MudTh>Qty</MudTh>
+                        <MudTh>Observation</MudTh>
+                        <MudTh></MudTh>
+                    </HeaderContent>
+                    <RowTemplate Context="item">
+                        <MudTd>
+                            <MudSelect T="Guid" Value="item.ProductId" Required="true"
+                                       ValueChanged="v => item.ProductId = v" Dense="true"
+                                       Validation="@(new Func<Guid, string?>(v => v == Guid.Empty ? "Required" : null))">
+                                @foreach (var p in Products)
+                                {
+                                    <MudSelectItem T="Guid" Value="p.Id">@p.Title (@p.Price.ToString("C"))</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudTd>
+                        <MudTd>
+                            <MudNumericField T="int" @bind-Value="item.Quantity" Min="1" Max="999"
+                                             Validation="@(new Func<int, string?>(v => v < 1 ? "Min 1" : null))" />
+                        </MudTd>
+                        <MudTd>
+                            <MudTextField @bind-Value="item.Observation" MaxLength="200" />
+                        </MudTd>
+                        <MudTd>
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                           OnClick="() => _command.Items.Remove(item)" />
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </MudForm>
+
+        <MudButton StartIcon="@Icons.Material.Filled.Add" OnClick="AddItem" Class="mt-2">
+            Add item
+        </MudButton>
+
+        <MudText Class="mt-3">
+            Items total: @EstimatedItemsTotal().ToString("C") |
+            Grand total: @((EstimatedItemsTotal() + _command.DeliveryFee).ToString("C"))
+        </MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_submitting">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit" Disabled="_submitting">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public List<CustomerModel> Customers { get; set; } = [];
+    [Parameter] public List<ProductModel> Products { get; set; } = [];
+
+    private readonly CreateOrderCommand _command = new();
+    private MudForm? _form;
+    private bool _submitting;
+
+    protected override void OnInitialized()
+    {
+        if (RestaurantContext.SelectedRestaurantId is { } id)
+        {
+            _command.RestaurantId = id;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private void AddItem() => _command.Items.Add(new OrderItemCommandModel());
+
+    private decimal EstimatedItemsTotal()
+        => _command.Items.Sum(i =>
+        {
+            var p = Products.FirstOrDefault(x => x.Id == i.ProductId);
+            return p is null ? 0m : p.Price * i.Quantity;
+        });
+
+    private async Task Submit()
+    {
+        if (_form is null) return;
+
+        if (_command.RestaurantId == Guid.Empty)
+        {
+            Snackbar.Add("No restaurant selected", Severity.Error);
+            return;
+        }
+        if (_command.Items.Count == 0)
+        {
+            Snackbar.Add("Add at least one item", Severity.Warning);
+            return;
+        }
+
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        if (_command.Items.Any(i => i.ProductId == Guid.Empty))
+        {
+            Snackbar.Add("Every item needs a product", Severity.Warning);
+            return;
+        }
+
+        _submitting = true;
+        try
+        {
+            var res = await Api.CreateOrderAsync(_command);
+            if (res.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Order created", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                Snackbar.Add("Failed to create order", Severity.Error);
+            }
+        }
+        finally
+        {
+            _submitting = false;
+        }
+    }
+}

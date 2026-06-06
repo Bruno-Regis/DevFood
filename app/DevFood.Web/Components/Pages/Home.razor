@@ -1,7 +1,29 @@
 ﻿@page "/"
 
-<PageTitle>Home</PageTitle>
+<PageTitle>DeliveryDev</PageTitle>
 
-<h1>Hello, world!</h1>
+<MudText Typo="Typo.h3" Class="mb-6">DeliveryDev</MudText>
 
-Welcome to your new app.
+<MudGrid>
+    @foreach (var card in _cards)
+    {
+        <MudItem xs="12" sm="6" md="4">
+            <MudPaper Class="pa-4" Elevation="2">
+                <MudText Typo="Typo.h6">@card.Title</MudText>
+                <MudButton Href="@card.Href" Variant="Variant.Text" Color="Color.Primary">Open</MudButton>
+            </MudPaper>
+        </MudItem>
+    }
+</MudGrid>
+
+@code {
+    private readonly (string Title, string Href)[] _cards =
+    [
+        ("Categories", "categories"),
+        ("Restaurants", "restaurants"),
+        ("Products", "products"),
+        ("Customers", "customers"),
+        ("Delivery Persons", "delivery-persons"),
+        ("Orders", "orders")
+    ];
+}

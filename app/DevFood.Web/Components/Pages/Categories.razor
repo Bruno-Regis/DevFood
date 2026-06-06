@@ -1,0 +1,43 @@
+﻿@page "/categories"
+@inject DevFoodApiClient Api
+@inject IDialogService DialogService
+
+<PageTitle>Categories</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Categories</MudText>
+
+<MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="OpenCreate" Class="mb-3">
+    New Category
+</MudButton>
+
+<MudTable Items="_items" Loading="_loading" Dense="true" Hover="true">
+    <HeaderContent>
+        <MudTh>Title</MudTh>
+        <MudTh>Description</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.Title</MudTd>
+        <MudTd>@context.Description</MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    private List<CategoryModel> _items = [];
+    private bool _loading = true;
+
+    protected override Task OnInitializedAsync() => Load();
+
+    private async Task Load()
+    {
+        _loading = true;
+        _items = await Api.GetCategoriesAsync() ?? [];
+        _loading = false;
+    }
+
+    private async Task OpenCreate()
+    {
+        var dialog = await DialogService.ShowAsync<CreateCategoryDialog>("New Category");
+        var result = await dialog.Result;
+        if (result is not null && !result.Canceled) await Load();
+    }
+}

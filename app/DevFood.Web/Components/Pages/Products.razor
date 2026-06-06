@@ -1,0 +1,86 @@
+﻿@page "/products"
+@implements IDisposable
+@inject DevFoodApiClient Api
+@inject IDialogService DialogService
+@inject RestaurantContext RestaurantContext
+
+<PageTitle>Products</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Products</MudText>
+
+@if (RestaurantContext.SelectedRestaurantId is null)
+{
+    <MudAlert Severity="Severity.Info">Select a restaurant in the header to see its products.</MudAlert>
+}
+else
+{
+    <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="OpenCreate" Class="mb-3">
+        New Product
+    </MudButton>
+
+    <MudTable Items="_items" Loading="_loading" Dense="true" Hover="true">
+        <HeaderContent>
+            <MudTh>Title</MudTh>
+            <MudTh>Type</MudTh>
+            <MudTh>Price</MudTh>
+            <MudTh>Restaurant</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>@context.Title</MudTd>
+            <MudTd>@context.ProductType</MudTd>
+            <MudTd>@context.Price.ToString("C")</MudTd>
+            <MudTd>@RestaurantName(context.RestaurantId)</MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+
+@code {
+    private List<ProductModel> _items = [];
+    private List<RestaurantModel> _restaurants = [];
+    private bool _loading;
+
+    protected override async Task OnInitializedAsync()
+    {
+        RestaurantContext.OnChange += OnRestaurantChanged;
+        _restaurants = await Api.GetRestaurantsAsync() ?? [];
+        await Load();
+    }
+
+    private async void OnRestaurantChanged()
+    {
+        await InvokeAsync(async () =>
+        {
+            await Load();
+            StateHasChanged();
+        });
+    }
+
+    private async Task Load()
+    {
+        var restaurantId = RestaurantContext.SelectedRestaurantId;
+        if (restaurantId is null)
+        {
+            _items = [];
+            return;
+        }
+
+        _loading = true;
+        _items = await Api.GetProductsAsync(restaurantId.Value) ?? [];
+        _loading = false;
+    }
+
+    private string RestaurantName(Guid id)
+        => _restaurants.FirstOrDefault(r => r.Id == id)?.Title ?? "-";
+
+    private async Task OpenCreate()
+    {
+        var dialog = await DialogService.ShowAsync<CreateProductDialog>("New Product");
+        var result = await dialog.Result;
+        if (result is not null && !result.Canceled) await Load();
+    }
+
+    public void Dispose()
+    {
+        RestaurantContext.OnChange -= OnRestaurantChanged;
+    }
+}

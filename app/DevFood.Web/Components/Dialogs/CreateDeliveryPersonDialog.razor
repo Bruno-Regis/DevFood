@@ -1,0 +1,73 @@
+﻿@inject DevFoodApiClient Api
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>New Delivery Person</TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form">
+            <MudTextField @bind-Value="_command.FullName" Label="Full name" Required="true"
+                          MaxLength="120"
+                          Validation="@(new Func<string?, string?>(v => Validators.MinLength(v, 2, "Full name")))"
+                          Immediate="true" />
+            <MudTextField @bind-Value="_command.Email" Label="Email" Required="true"
+                          MaxLength="160" InputType="InputType.Email"
+                          Validation="@(new Func<string?, string?>(Validators.Email))"
+                          Immediate="true" />
+            <MudDatePicker @bind-Date="_birthDate" Label="Birth date" Required="true"
+                           MaxDate="DateTime.Today"
+                           Validation="@(new Func<DateTime?, string?>(Validators.BirthDate))" />
+            <MudTextField @bind-Value="_command.Document" Label="Document" Required="true"
+                          MaxLength="32"
+                          Validation="@(new Func<string?, string?>(Validators.Document))" />
+            <MudTextField @bind-Value="_command.PhoneNumber" Label="Phone" Required="true"
+                          MaxLength="32"
+                          Validation="@(new Func<string?, string?>(Validators.Phone))" />
+            <MudTextField @bind-Value="_command.FullAddress" Label="Full address" Lines="2"
+                          Required="true" MaxLength="200"
+                          Validation="@(new Func<string?, string?>(v => Validators.MinLength(v, 5, "Full address")))" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_submitting">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit" Disabled="_submitting">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    private readonly CreateDeliveryPersonCommand _command = new();
+    private DateTime? _birthDate = DateTime.Today.AddYears(-25);
+    private MudForm? _form;
+    private bool _submitting;
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Submit()
+    {
+        if (_form is null) return;
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _command.BirthDate = _birthDate!.Value;
+
+        _submitting = true;
+        try
+        {
+            var res = await Api.CreateDeliveryPersonAsync(_command);
+            if (res.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Delivery person created", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                Snackbar.Add("Failed to create delivery person", Severity.Error);
+            }
+        }
+        finally
+        {
+            _submitting = false;
+        }
+    }
+}

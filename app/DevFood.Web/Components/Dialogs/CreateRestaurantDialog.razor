@@ -1,0 +1,75 @@
+﻿@inject DevFoodApiClient Api
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>New Restaurant</TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form">
+            <MudTextField @bind-Value="_command.Title" Label="Title" Required="true"
+                          MaxLength="120"
+                          Validation="@(new Func<string?, string?>(v => Validators.MinLength(v, 2, "Title")))"
+                          Immediate="true" />
+            <MudTextField @bind-Value="_command.Description" Label="Description" Lines="2"
+                          MaxLength="500" />
+            <MudTextField @bind-Value="_command.Address" Label="Address" Required="true"
+                          MaxLength="200"
+                          Validation="@(new Func<string?, string?>(v => Validators.MinLength(v, 5, "Address")))"
+                          Immediate="true" />
+            <MudNumericField T="decimal?" @bind-Value="_command.MininumOrderAmount"
+                             Label="Minimum order amount" Min="0" Format="N2"
+                             Validation="@(new Func<decimal?, string?>(v =>
+                                                              v is < 0 ? "Minimum order amount cannot be negative" : null))" />
+            <MudSelect T="Guid" Label="Categories" MultiSelection="true" Required="true"
+                       SelectedValues="_command.Categories"
+                       SelectedValuesChanged="v => _command.Categories = v?.ToList() ?? []"
+                       ToStringFunc="id => Categories.SingleOrDefault(c => c.Id == id)?.Title"
+                       Validation="@(new Func<IEnumerable<Guid>?, string?>(v => Validators.AtLeastOne(v, "category")))">
+                @foreach (var c in Categories)
+                {
+                    <MudSelectItem T="Guid" Value="c.Id">@c.Title</MudSelectItem>
+                }
+            </MudSelect>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_submitting">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit" Disabled="_submitting">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public List<CategoryModel> Categories { get; set; } = [];
+
+    private readonly CreateRestaurantCommand _command = new();
+    private MudForm? _form;
+    private bool _submitting;
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Submit()
+    {
+        if (_form is null) return;
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _submitting = true;
+        try
+        {
+            var res = await Api.CreateRestaurantAsync(_command);
+            if (res.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Restaurant created", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                Snackbar.Add("Failed to create restaurant", Severity.Error);
+            }
+        }
+        finally
+        {
+            _submitting = false;
+        }
+    }
+}

@@ -1,0 +1,96 @@
+﻿@page "/orders"
+@implements IDisposable
+@inject DevFoodApiClient Api
+@inject IDialogService DialogService
+@inject RestaurantContext RestaurantContext
+
+<PageTitle>Orders</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Orders</MudText>
+
+<MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="OpenCreate"
+           Class="mb-3" Disabled="RestaurantContext.SelectedRestaurantId is null">
+    New Order
+</MudButton>
+
+@if (RestaurantContext.SelectedRestaurantId is null)
+{
+    <MudAlert Severity="Severity.Info" Class="mb-3">
+        Select a restaurant in the header to create new orders.
+    </MudAlert>
+}
+
+<MudTable Items="_items" Loading="_loading" Dense="true" Hover="true">
+    <HeaderContent>
+        <MudTh>Created</MudTh>
+        <MudTh>Status</MudTh>
+        <MudTh>Restaurant</MudTh>
+        <MudTh>Customer</MudTh>
+        <MudTh>Items</MudTh>
+        <MudTh>Total</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.CreatedAt.ToLocalTime().ToString("g")</MudTd>
+        <MudTd>@context.Status</MudTd>
+        <MudTd>@RestaurantName(context.RestaurantId)</MudTd>
+        <MudTd>@CustomerName(context.CustomerId)</MudTd>
+        <MudTd>@context.ItemCount</MudTd>
+        <MudTd>@((context.TotalItemsPrice + context.DeliveryFee).ToString("C"))</MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    private List<OrderModel> _items = [];
+    private List<RestaurantModel> _restaurants = [];
+    private List<CustomerModel> _customers = [];
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        RestaurantContext.OnChange += OnRestaurantChanged;
+        _restaurants = await Api.GetRestaurantsAsync() ?? [];
+        _customers = await Api.GetCustomersAsync() ?? [];
+        await Load();
+    }
+
+    private void OnRestaurantChanged() => InvokeAsync(StateHasChanged);
+
+    private async Task Load()
+    {
+        _loading = true;
+
+        if (RestaurantContext.SelectedRestaurantId != null)
+        {
+            _items = await Api.GetOrdersAsync(RestaurantContext.SelectedRestaurantId) ?? [];
+        }
+
+        _loading = false;
+    }
+
+    private async Task OpenCreate()
+    {
+        var restaurantId = RestaurantContext.SelectedRestaurantId;
+        if (restaurantId is null) return;
+
+        _customers = await Api.GetCustomersAsync() ?? [];
+        var products = await Api.GetProductsAsync(restaurantId.Value) ?? [];
+
+        var parameters = new DialogParameters
+        {
+            ["Customers"] = _customers,
+            ["Products"] = products
+        };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseOnEscapeKey = true };
+        var dialog = await DialogService.ShowAsync<CreateOrderDialog>("New Order", parameters, options);
+        var result = await dialog.Result;
+        if (result is not null && !result.Canceled) await Load();
+    }
+
+    private string RestaurantName(Guid id) => _restaurants.FirstOrDefault(r => r.Id == id)?.Title ?? "-";
+    private string CustomerName(Guid id) => _customers.FirstOrDefault(c => c.Id == id)?.FullName ?? "-";
+
+    public void Dispose()
+    {
+        RestaurantContext.OnChange -= OnRestaurantChanged;
+    }
+}

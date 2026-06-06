@@ -1,0 +1,83 @@
+﻿@inject DevFoodApiClient Api
+@inject ISnackbar Snackbar
+@inject RestaurantContext RestaurantContext
+
+<MudDialog>
+    <TitleContent>New Product</TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form">
+            <MudTextField @bind-Value="_command.Title" Label="Title" Required="true"
+                          MaxLength="120"
+                          Validation="@(new Func<string?, string?>(v => Validators.MinLength(v, 2, "Title")))"
+                          Immediate="true" />
+            <MudTextField @bind-Value="_command.Description" Label="Description" Lines="2"
+                          MaxLength="500" />
+            <MudTextField @bind-Value="_command.PhotoUrl" Label="Photo URL"
+                          MaxLength="500"
+                          Validation="@(new Func<string?, string?>(Validators.OptionalUrl))" />
+            <MudSelect T="int" @bind-Value="_command.Type" Label="Type" Required="true">
+                @foreach (var t in Enum.GetValues<ProductType>())
+                {
+                    <MudSelectItem T="int" Value="(int)t">@t</MudSelectItem>
+                }
+            </MudSelect>
+            <MudNumericField T="decimal" @bind-Value="_command.Price" Label="Price" Required="true"
+                             Min="0" Format="N2"
+                             Validation="@(new Func<decimal, string?>(v => Validators.PositiveDecimal(v, "Price")))" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_submitting">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit" Disabled="_submitting">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    private readonly CreateProductCommand _command = new();
+    private MudForm? _form;
+    private bool _submitting;
+
+    protected override void OnInitialized()
+    {
+        if (RestaurantContext.SelectedRestaurantId is { } id)
+        {
+            _command.RestaurantId = id;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Submit()
+    {
+        if (_form is null) return;
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        if (_command.RestaurantId == Guid.Empty)
+        {
+            Snackbar.Add("No restaurant selected", Severity.Error);
+            return;
+        }
+
+        _submitting = true;
+        try
+        {
+            var res = await Api.CreateProductAsync(_command);
+            if (res.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Product created", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                Snackbar.Add("Failed to create product", Severity.Error);
+            }
+        }
+        finally
+        {
+            _submitting = false;
+        }
+    }
+}

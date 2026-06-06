@@ -1,0 +1,59 @@
+﻿@page "/delivery-persons"
+@inject DevFoodApiClient Api
+@inject IDialogService DialogService
+
+<PageTitle>Delivery Persons</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Delivery Persons</MudText>
+
+<MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="OpenCreate" Class="mb-3">
+    New Delivery Person
+</MudButton>
+
+<MudTable Items="_items" Loading="_loading" Dense="true" Hover="true">
+    <HeaderContent>
+        <MudTh>Full Name</MudTh>
+        <MudTh>Email</MudTh>
+        <MudTh>Phone</MudTh>
+        <MudTh>Address</MudTh>
+        <MudTh>Status</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.FullName</MudTd>
+        <MudTd>@context.Email</MudTd>
+        <MudTd>@context.PhoneNumber</MudTd>
+        <MudTd>@context.FullAddress</MudTd>
+        <MudTd>@context.BirthDate.ToShortDateString()</MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    private List<DeliveryPersonModel> _items = [];
+    private bool _loading = true;
+
+    protected override Task OnInitializedAsync() => Load();
+
+    private async Task Load()
+    {
+        _loading = true;
+        _items = await Api.GetDeliveryPersonsAsync() ?? [];
+        _loading = false;
+    }
+
+    private async Task OpenCreate()
+    {
+        var dialog = await DialogService.ShowAsync<CreateDeliveryPersonDialog>("New Delivery Person");
+        var result = await dialog.Result;
+        if (result is not null && !result.Canceled) await Load();
+    }
+
+    private static string StatusName(int s) => s switch
+    {
+        1 => "Available",
+        2 => "In delivery",
+        3 => "Unavailable",
+        4 => "Suspended",
+        5 => "Cancelled",
+        _ => s.ToString()
+    };
+}
